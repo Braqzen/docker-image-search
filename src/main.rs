@@ -1,4 +1,6 @@
 mod cli;
+mod docker;
+mod github;
 mod parser;
 
 use anyhow::Result;
