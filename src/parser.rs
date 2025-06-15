@@ -1,0 +1,49 @@
+use anyhow::{Result, bail};
+use std::process::Command;
+
+pub const DEFAULT_SOURCE: &str = "org.opencontainers.image.source";
+pub const DEFAULT_REVISION: &str = "org.opencontainers.image.revision";
+pub const OLD_SOURCE: &str = "org.label-schema.vcs-url";
+pub const OLD_REVISION: &str = "org.label-schema.vcs-ref";
+
+pub struct Parser;
+
+impl Parser {
+    pub fn label(image: &str, label: &str) -> Option<String> {
+        let output = Command::new("docker")
+            .args([
+                "inspect",
+                "--format",
+                &format!("{{{{index .Config.Labels \"{}\"}}}}", label),
+                image,
+            ])
+            .output()
+            .ok()?;
+
+        if output.status.success() {
+            let label_value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !label_value.is_empty() {
+                return Some(label_value);
+            }
+        }
+        None
+    }
+
+    pub fn split_tag(image: &str) -> Result<(&str, Option<&str>)> {
+        // TODO: ignore private repos for now and assume it only contains a tag at the end
+        if let Some(slash) = image.find('/') {
+            let host = &image[..slash];
+            // TODO: probably doesn't cover all cases
+            if host.contains(':') || host == "localhost" || host.contains("127.0.0.1") {
+                bail!("private registries not supported: {host}");
+            }
+        }
+
+        if let Some(idx) = image.rfind(':') {
+            if image[idx..].find('/').is_none() {
+                return Ok((&image[..idx], Some(&image[idx + 1..])));
+            }
+        }
+        Ok((image, None))
+    }
+}
