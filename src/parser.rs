@@ -9,6 +9,22 @@ pub const OLD_REVISION: &str = "org.label-schema.vcs-ref";
 pub struct Parser;
 
 impl Parser {
+    pub fn parse(image: &str) -> Result<(Option<&str>, Option<&str>, &str)> {
+        // TODO: tag is unused for now
+        let (name, _tag) = Self::split_tag(image)?;
+        let parts: Vec<&str> = name.split('/').collect();
+
+        // TODO: assumes max 3 parts
+        let (registry, namespace, repo) = match parts.as_slice() {
+            [repo] => (None, None, *repo),
+            [namespace, repo] => (None, Some(*namespace), *repo),
+            [registry, namespace, repo] => (Some(*registry), Some(*namespace), *repo),
+            _ => unimplemented!("Unsupported image name. Assumes a name with max 2 slashes atm"),
+        };
+
+        Ok((registry, namespace, repo))
+    }
+
     pub fn label(image: &str, label: &str) -> Option<String> {
         let output = Command::new("docker")
             .args([
@@ -29,7 +45,7 @@ impl Parser {
         None
     }
 
-    pub fn split_tag(image: &str) -> Result<(&str, Option<&str>)> {
+    fn split_tag(image: &str) -> Result<(&str, Option<&str>)> {
         // TODO: ignore private repos for now and assume it only contains a tag at the end
         if let Some(slash) = image.find('/') {
             let host = &image[..slash];

@@ -4,7 +4,6 @@ use crate::{
     parser::{DEFAULT_REVISION, DEFAULT_SOURCE, OLD_REVISION, OLD_SOURCE, Parser},
 };
 use anyhow::{Context, Result, bail};
-use reqwest::Client;
 use std::process::Command;
 
 #[derive(clap::Parser)]
@@ -23,23 +22,10 @@ impl Cli {
             return Ok(());
         }
 
-        // TODO: tag is unused for now
-        let (name, _tag) = Parser::split_tag(&self.image)?;
-        let parts: Vec<&str> = name.split('/').collect();
+        let docker = Docker::new();
+        let github = Github::new();
 
-        // TODO: assumes max 3 parts
-        let (registry, namespace, repo) = match parts.as_slice() {
-            [repo] => (None, None, *repo),
-            [namespace, repo] => (None, Some(*namespace), *repo),
-            [registry, namespace, repo] => (Some(*registry), Some(*namespace), *repo),
-            _ => unimplemented!("Unsupported image name. Assumes a name with max 2 slashes atm"),
-        };
-
-        let client = Client::new();
-        let docker = Docker::new(client.clone());
-        let github = Github::new(client.clone());
-
-        match (registry, namespace, repo) {
+        match Parser::parse(&self.image)? {
             (None, None, repo) => {
                 if !docker.check("library", repo).await {
                     bail!("Docker Hub repo does not exist");

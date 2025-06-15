@@ -7,8 +7,10 @@ pub struct Github {
 }
 
 impl Github {
-    pub fn new(client: Client) -> Self {
-        Self { client }
+    pub fn new() -> Self {
+        Self {
+            client: Client::new(),
+        }
     }
 
     pub async fn check_repo(&self, owner: &str, repo: &str) -> (bool, Option<String>) {

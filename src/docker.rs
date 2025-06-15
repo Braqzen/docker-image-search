@@ -5,8 +5,10 @@ pub struct Docker {
 }
 
 impl Docker {
-    pub fn new(client: Client) -> Self {
-        Self { client }
+    pub fn new() -> Self {
+        Self {
+            client: Client::new(),
+        }
     }
 
     pub async fn check(&self, namespace: &str, repo: &str) -> bool {
