@@ -1,11 +1,6 @@
 use anyhow::{Result, bail};
 use std::process::Command;
 
-pub const DEFAULT_SOURCE: &str = "org.opencontainers.image.source";
-pub const DEFAULT_REVISION: &str = "org.opencontainers.image.revision";
-pub const OLD_SOURCE: &str = "org.label-schema.vcs-url";
-pub const OLD_REVISION: &str = "org.label-schema.vcs-ref";
-
 pub struct Parser;
 
 impl Parser {
@@ -50,7 +45,7 @@ impl Parser {
         if let Some(slash) = image.find('/') {
             let host = &image[..slash];
             // TODO: probably doesn't cover all cases
-            if host.contains(':') || host == "localhost" || host.contains("127.0.0.1") {
+            if host.contains(':') || host.contains("localhost") || host.contains("127.0.0.1") {
                 bail!("private registries not supported: {host}");
             }
         }

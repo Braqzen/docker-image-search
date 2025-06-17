@@ -1,5 +1,10 @@
 use reqwest::Client;
 
+pub const DEFAULT_SOURCE: &str = "org.opencontainers.image.source";
+pub const DEFAULT_REVISION: &str = "org.opencontainers.image.revision";
+pub const OLD_SOURCE: &str = "org.label-schema.vcs-url";
+pub const OLD_REVISION: &str = "org.label-schema.vcs-ref";
+
 pub struct Docker {
     client: Client,
 }

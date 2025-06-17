@@ -1,7 +1,7 @@
 use crate::{
-    docker::Docker,
+    docker::{DEFAULT_REVISION, DEFAULT_SOURCE, Docker, OLD_REVISION, OLD_SOURCE},
     github::Github,
-    parser::{DEFAULT_REVISION, DEFAULT_SOURCE, OLD_REVISION, OLD_SOURCE, Parser},
+    parser::Parser,
 };
 use anyhow::{Context, Result, bail};
 use std::process::Command;
@@ -15,8 +15,8 @@ pub struct Cli {
 impl Cli {
     pub async fn run(self) -> Result<()> {
         // TODO: if this finds a ref it will open a page which may 404
-        if let Ok((msg, url)) = inspect_image(&self.image) {
-            println!("{msg}");
+        if let Ok((msg, url)) = inspect_image(&self.image).await {
+            println!("aaa {msg}");
             open(&url)?;
 
             return Ok(());
@@ -108,23 +108,39 @@ impl Cli {
     }
 }
 
-fn inspect_image(image: &str) -> Result<(String, String)> {
+async fn inspect_image(image: &str) -> Result<(String, String)> {
     // Check if you have a local image and inspect its labels to construct a url
     let source = Parser::label(image, DEFAULT_SOURCE).or_else(|| Parser::label(image, OLD_SOURCE));
-
-    // TODO: revision may not be a commit hash, check if it's a sha commit hash, if it is then use it otherwise ignore
     let revision =
         Parser::label(image, DEFAULT_REVISION).or_else(|| Parser::label(image, OLD_REVISION));
 
     if let (Some(src), Some(rev)) = (source, revision) {
+        // Validate that the revision is a valid SHA-1 hash (40 characters of hex)
+        if rev.len() != 40 || !rev.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(anyhow::anyhow!("Invalid SHA-1 revision format"));
+        }
+
         // Replace a SSH URL with a HTTPS URL
         let src = src.replace("git@github.com:", "https://github.com/");
         // Remove the .git suffix if it exists
         let src = src.trim_end_matches(".git");
 
-        // TODO: add a check to see if the file exists at the url
-        // Assume there is a dockerfile at the root of the repo
-        // TODO: even with src and rev the repo may not have a Dockerfile here
+        // Extract owner and repo from the GitHub URL
+        let parts: Vec<&str> = src
+            .trim_start_matches("https://github.com/")
+            .split('/')
+            .collect();
+        if parts.len() != 2 {
+            return Err(anyhow::anyhow!("Invalid GitHub URL format"));
+        }
+        let (owner, repo) = (parts[0], parts[1]);
+
+        // Check if the Dockerfile exists at this commit
+        let github = Github::new();
+        if !github.check(owner, repo, "Dockerfile", &rev).await? {
+            return Err(anyhow::anyhow!("Dockerfile not found at this commit"));
+        }
+
         let url = format!("{src}/blob/{rev}/Dockerfile");
         let msg = format!("Opening GitHub → {url}");
         return Ok((msg, url));
