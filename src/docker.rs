@@ -1,4 +1,5 @@
 use reqwest::Client;
+use std::process::Command;
 
 pub const DEFAULT_SOURCE: &str = "org.opencontainers.image.source";
 pub const DEFAULT_REVISION: &str = "org.opencontainers.image.revision";
@@ -16,11 +17,30 @@ impl Docker {
         }
     }
 
-    pub async fn check(&self, namespace: &str, repo: &str) -> bool {
-        let url = format!(
-            "https://hub.docker.com/v2/repositories/{}/{}/",
-            namespace, repo
-        );
+    pub fn inspect(image: &str, label: &str) -> Option<String> {
+        let output = Command::new("docker")
+            .args([
+                "inspect",
+                "--format",
+                &format!("{{{{index .Config.Labels \"{}\"}}}}", label),
+                image,
+            ])
+            .output()
+            .ok()?;
+
+        if output.status.success() {
+            let label_value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !label_value.is_empty() {
+                return Some(label_value);
+            }
+        }
+
+        None
+    }
+
+    pub async fn repo_exists(&self, namespace: &str, repo: &str) -> bool {
+        let url = format!("https://hub.docker.com/v2/repositories/{namespace}/{repo}");
+
         match self.client.get(&url).send().await {
             Ok(response) => response.status().is_success(),
             Err(_) => false,
