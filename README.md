@@ -10,12 +10,14 @@ Table of Contents
     - [Foundry](#foundry)
     - [Ethereum's Golang Client](#ethereums-golang-client)
 - [Development](#development)
+  - [Architecture](#architecture)
+  - [Tests](#tests)
 
 ## Overview
 
 If you've ever looked at a Dockerfile and wanted to know how one of its images is built but didn't know where to find it then you can query this tool with the image and it will **attempt** to find and display the Dockerfile in your default browser.
 
-> NOTE: WIP, doesn't cover all formats, private repos you do not have access to, and may default to displaying the closest page it can find if it cannot locate the actual file but knows the image is somewhere in the project. It probably doesn't work across all platforms.
+> NOTE: WIP, doesn't cover all formats, private repos you do not have access to, and may default to displaying the closest page it can find if it cannot locate the actual file but knows the image is somewhere in the project. It probably doesn't work across all platforms. 1 part also assumes you have docker installed which needs to be changed if not installed.
 
 ## Usage
 
@@ -70,6 +72,18 @@ $ dis ethereum/client-go
 ```
 
 ## Development
+
+### Architecture
+
+TODO: update this terrible list
+
+1. Given an image use docker to check if you have that image and inspect its contents to see if it has embedded labels that can be used to go straight to the website.
+2. Break the image into components and determine potential origin i.e. Docker Hub, GitHub, some other registry
+3. Using the components query to see if the file exists
+   1. If exists, open directly
+   2. If it doesn't exist but determined the image is somewhere in that project then open project instead
+
+### Tests
 
 Run the unit tests.
 
