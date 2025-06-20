@@ -57,7 +57,7 @@ impl Cli {
                     bail!("Docker Hub repo does not exist");
                 }
 
-                Ok(docker.url(None, repo))
+                Ok(Docker::web_url(None, repo))
             }
 
             // Case 2: No registry, namespace/repo - GitHub || Docker (e.g., "project/repo:reference")
@@ -91,7 +91,7 @@ impl Cli {
                     bail!("Docker Hub repo does not exist");
                 }
 
-                Ok(docker.url(Some(namespace), repo))
+                Ok(Docker::web_url(Some(namespace), repo))
             }
 
             // Case 3: Registry with namespace (e.g., "registry.io/project")

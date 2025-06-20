@@ -39,19 +39,90 @@ impl Docker {
     }
 
     pub async fn repo_exists(&self, namespace: &str, repo: &str) -> bool {
-        let url = format!("https://hub.docker.com/v2/repositories/{namespace}/{repo}");
+        let url = Self::api_url(namespace, repo);
 
-        match self.client.get(&url).send().await {
+        match self.client.head(&url).send().await {
             Ok(response) => response.status().is_success(),
             Err(_) => false,
         }
     }
 
-    pub fn url(&self, namespace: Option<&str>, repo: &str) -> String {
+    pub fn web_url(namespace: Option<&str>, repo: &str) -> String {
         if let Some(namespace) = namespace {
-            format!("https://hub.docker.com/r/{namespace}/{repo}")
+            Self::web_namespace_url(namespace, repo)
         } else {
-            format!("https://hub.docker.com/_/{repo}")
+            Self::web_repo_url(repo)
+        }
+    }
+
+    fn api_url(namespace: &str, repo: &str) -> String {
+        format!("https://hub.docker.com/v2/repositories/{namespace}/{repo}")
+    }
+
+    fn web_namespace_url(namespace: &str, repo: &str) -> String {
+        format!("https://hub.docker.com/r/{namespace}/{repo}")
+    }
+
+    fn web_repo_url(repo: &str) -> String {
+        format!("https://hub.docker.com/_/{repo}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const REPO: &str = "project";
+    const NAMESPACE: &str = "namespace";
+
+    mod public {
+        use super::*;
+
+        // TODO: unsure how to test Docker::inspect() while using an image that doesn't exist. Need to mock somehow without changing code above
+        // TODO: similarly, Docker::repo_exists() needs to be mocked and resolve to some mock server
+
+        #[test]
+        fn test_web_url_namespace() {
+            assert_eq!(
+                Docker::web_url(Some("namespace"), REPO),
+                "https://hub.docker.com/r/namespace/project"
+            );
+        }
+
+        #[test]
+        fn test_web_url_no_namespace() {
+            assert_eq!(
+                Docker::web_url(None, REPO),
+                "https://hub.docker.com/_/project"
+            );
+        }
+    }
+
+    mod private {
+        use super::*;
+
+        #[test]
+        fn test_api_url() {
+            assert_eq!(
+                Docker::api_url(NAMESPACE, REPO),
+                "https://hub.docker.com/v2/repositories/namespace/project"
+            );
+        }
+
+        #[test]
+        fn test_web_namespace_url() {
+            assert_eq!(
+                Docker::web_namespace_url(NAMESPACE, REPO),
+                "https://hub.docker.com/r/namespace/project"
+            );
+        }
+
+        #[test]
+        fn test_web_repo_url() {
+            assert_eq!(
+                Docker::web_repo_url(REPO),
+                "https://hub.docker.com/_/project"
+            );
         }
     }
 }
