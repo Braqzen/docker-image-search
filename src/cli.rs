@@ -125,3 +125,64 @@ fn open(url: &str) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const REGISTRY: &str = "registry.io";
+    const NAMESPACE: &str = "project";
+    const REPO: &str = "repo";
+    const REFERENCE: &str = "reference";
+
+    // TODO: case 1 & 2 make http calls that are not mocked so skipping tests for now
+
+    #[tokio::test]
+    async fn test_registry_with_namespace() -> Result<()> {
+        let cli = Cli {
+            image: format!("{REGISTRY}/{NAMESPACE}").to_string(),
+        };
+
+        let url = cli.url(Some(REGISTRY), vec![NAMESPACE]).await?;
+        assert_eq!(url, format!("https://{REGISTRY}/{NAMESPACE}"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_registry_with_namespace_and_repo() -> Result<()> {
+        let cli = Cli {
+            image: format!("{REGISTRY}/{NAMESPACE}/{REPO}").to_string(),
+        };
+
+        let url = cli.url(Some(REGISTRY), vec![NAMESPACE, REPO]).await?;
+        assert_eq!(url, format!("https://{REGISTRY}/{NAMESPACE}/{REPO}"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_registry_with_namespace_and_repo_and_reference() -> Result<()> {
+        // TODO: reference is unused
+        let cli = Cli {
+            image: format!("{REGISTRY}/{NAMESPACE}/{REPO}:{REFERENCE}").to_string(),
+        };
+
+        let url = cli.url(Some(REGISTRY), vec![NAMESPACE, REPO]).await?;
+        assert_eq!(url, format!("https://{REGISTRY}/{NAMESPACE}/{REPO}"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn test_unsupported_image_format() {
+        let cli = Cli {
+            image: format!("{NAMESPACE}/{REPO}/subdir:{REFERENCE}").to_string(),
+        };
+
+        cli.url(None, vec![NAMESPACE, REPO, "subdir"])
+            .await
+            .expect("Unsupported image format");
+    }
+}
