@@ -17,7 +17,7 @@ Table of Contents
     - [Local Repos](#local-repos)
     - [References / Tags](#references--tags)
     - [Docker Hub](#docker-hub)
-  - [Github](#github)
+    - [Github](#github)
 - [Development](#development)
   - [Architecture](#architecture)
   - [Tests](#tests)
@@ -114,7 +114,7 @@ The API does not expose a way to associate a reference with a project to allow u
 
 Once Docker Hub is opened you must read the overview and click the reference to redirect you to the Dockerfile, if the reference is listed and hyperlinked. 
 
-### Github
+#### Github
 
 If a reference is provided it will try to use it. If it fails to find the file for that reference it will attempt to use the default branch of the repo to find a file instead.
 
