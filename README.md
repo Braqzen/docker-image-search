@@ -43,10 +43,12 @@ Verify installation
 ```shell
 $ dis --help
 
-Usage: dis <IMAGE>
+Usage: dis <IMAGE> <USER> <TOKEN>
 
 Arguments:
   <IMAGE>  Docker image name with optional tag (e.g., project:reference)
+  <USER>   GitHub username [env: GITHUB_USER]
+  <TOKEN>  GitHub token with read access to packages [env: GITHUB_TOKEN]
 
 Options:
   -h, --help  Print help

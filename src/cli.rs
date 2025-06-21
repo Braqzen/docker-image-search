@@ -12,11 +12,11 @@ pub struct Cli {
     pub image: String,
 
     /// GitHub username
-    #[clap(env = "GITHUB_USER", hide_env = true)]
+    #[clap(env = "GITHUB_USER", hide_env_values = true)]
     pub user: String,
 
     /// GitHub token with read access to packages
-    #[clap(env = "GITHUB_TOKEN", hide_env = true)]
+    #[clap(env = "GITHUB_TOKEN", hide_env_values = true)]
     pub token: String,
 }
 
