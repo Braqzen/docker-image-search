@@ -10,6 +10,8 @@ use std::process::exit;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
+
     let cli = Cli::parse();
 
     if cli.image.is_empty() {

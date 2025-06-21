@@ -10,6 +10,14 @@ use std::process::Command;
 pub struct Cli {
     /// Docker image name with optional tag (e.g., project:reference)
     pub image: String,
+
+    /// GitHub username
+    #[clap(env = "GITHUB_USER", hide_env = true)]
+    pub user: String,
+
+    /// GitHub token with read access to packages
+    #[clap(env = "GITHUB_TOKEN", hide_env = true)]
+    pub token: String,
 }
 
 impl Cli {
@@ -36,17 +44,21 @@ impl Cli {
             }
         }
 
-        // TODO: reference is unused
-        let (registry, parts, _reference) = Parser::parse_image(&self.image);
+        let (registry, parts, reference) = Parser::parse_image(&self.image);
 
-        let url = self.url(registry, parts).await?;
+        let url = self.url(registry, parts, reference).await?;
         println!("Opening {url}");
         open(&url)?;
 
         Ok(())
     }
 
-    async fn url(&self, registry: Option<&str>, parts: Vec<&str>) -> Result<String> {
+    async fn url(
+        &self,
+        registry: Option<&str>,
+        parts: Vec<&str>,
+        reference: Option<&str>,
+    ) -> Result<String> {
         let docker = Docker::new();
         let github = Github::new();
 
@@ -63,12 +75,32 @@ impl Cli {
             // Case 2: No registry, namespace/repo - GitHub || Docker (e.g., "project/repo:reference")
             (None, [namespace, repo]) => {
                 if let Some(default_branch) = github.check_repo(namespace, repo).await {
+                    // Couple paths to check for Dockerfile
                     let paths = vec!["Dockerfile", "docker/Dockerfile"];
+
+                    // Found path to Dockerfile
                     let mut file_path = None;
+
+                    // If reference is provided, use it to get the revision
+                    let revision = if let Some(reference) = reference {
+                        github
+                            .revision(
+                                namespace,
+                                repo,
+                                reference,
+                                &self.user,
+                                &self.token,
+                                &default_branch,
+                            )
+                            .await
+                            .unwrap_or(default_branch)
+                    } else {
+                        default_branch
+                    };
 
                     for path in paths {
                         if github
-                            .file_exists(namespace, repo, path, &default_branch)
+                            .file_exists(namespace, repo, path, &revision)
                             .await
                             .unwrap_or(false)
                         {
@@ -78,12 +110,7 @@ impl Cli {
                     }
 
                     if let Some(file_path) = file_path {
-                        return Ok(Github::web_url(
-                            namespace,
-                            repo,
-                            &file_path,
-                            &default_branch,
-                        ));
+                        return Ok(Github::web_url(namespace, repo, &file_path, &revision));
                     }
                 }
 
@@ -95,9 +122,8 @@ impl Cli {
             }
 
             // Case 3: Registry with namespace (e.g., "registry.io/project")
-            (Some(registry), [namespace]) => {
-                // TODO: does this work?
-                Ok(format!("https://{registry}/{namespace}"))
+            (Some(_registry), [_namespace]) => {
+                bail!("Registry with only a namespace is an invalid image format");
             }
 
             // Case 4: Registry with namespace and repo (e.g., "registry.io/project/repo:reference")
@@ -130,6 +156,9 @@ fn open(url: &str) -> Result<()> {
 mod tests {
     use super::*;
 
+    const USER: &str = "user";
+    const TOKEN: &str = "token";
+
     const REGISTRY: &str = "registry.io";
     const NAMESPACE: &str = "project";
     const REPO: &str = "repo";
@@ -138,24 +167,28 @@ mod tests {
     // TODO: case 1 & 2 make http calls that are not mocked so skipping tests for now
 
     #[tokio::test]
-    async fn test_registry_with_namespace() -> Result<()> {
+    #[should_panic]
+    async fn test_registry_with_namespace() {
         let cli = Cli {
             image: format!("{REGISTRY}/{NAMESPACE}").to_string(),
+            user: USER.to_string(),
+            token: TOKEN.to_string(),
         };
 
-        let url = cli.url(Some(REGISTRY), vec![NAMESPACE]).await?;
-        assert_eq!(url, format!("https://{REGISTRY}/{NAMESPACE}"));
-
-        Ok(())
+        cli.url(Some(REGISTRY), vec![NAMESPACE], None)
+            .await
+            .expect("Unsupported image format");
     }
 
     #[tokio::test]
     async fn test_registry_with_namespace_and_repo() -> Result<()> {
         let cli = Cli {
             image: format!("{REGISTRY}/{NAMESPACE}/{REPO}").to_string(),
+            user: USER.to_string(),
+            token: TOKEN.to_string(),
         };
 
-        let url = cli.url(Some(REGISTRY), vec![NAMESPACE, REPO]).await?;
+        let url = cli.url(Some(REGISTRY), vec![NAMESPACE, REPO], None).await?;
         assert_eq!(url, format!("https://{REGISTRY}/{NAMESPACE}/{REPO}"));
 
         Ok(())
@@ -166,9 +199,11 @@ mod tests {
         // TODO: reference is unused
         let cli = Cli {
             image: format!("{REGISTRY}/{NAMESPACE}/{REPO}:{REFERENCE}").to_string(),
+            user: USER.to_string(),
+            token: TOKEN.to_string(),
         };
 
-        let url = cli.url(Some(REGISTRY), vec![NAMESPACE, REPO]).await?;
+        let url = cli.url(Some(REGISTRY), vec![NAMESPACE, REPO], None).await?;
         assert_eq!(url, format!("https://{REGISTRY}/{NAMESPACE}/{REPO}"));
 
         Ok(())
@@ -179,9 +214,11 @@ mod tests {
     async fn test_unsupported_image_format() {
         let cli = Cli {
             image: format!("{NAMESPACE}/{REPO}/subdir:{REFERENCE}").to_string(),
+            user: USER.to_string(),
+            token: TOKEN.to_string(),
         };
 
-        cli.url(None, vec![NAMESPACE, REPO, "subdir"])
+        cli.url(None, vec![NAMESPACE, REPO, "subdir"], None)
             .await
             .expect("Unsupported image format");
     }

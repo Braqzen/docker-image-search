@@ -5,10 +5,19 @@ Table of Contents
 - [Overview](#overview)
 - [Usage](#usage)
   - [Installation](#installation)
+  - [Environment](#environment)
   - [Image Search Examples](#image-search-examples)
     - [Redis](#redis)
     - [Foundry](#foundry)
     - [Ethereum's Golang Client](#ethereums-golang-client)
+  - [Caveats](#caveats)
+    - [Platform](#platform)
+    - [Webpage](#webpage)
+    - [Private Repos](#private-repos)
+    - [Local Repos](#local-repos)
+    - [References / Tags](#references--tags)
+    - [Docker Hub](#docker-hub)
+  - [Github](#github)
 - [Development](#development)
   - [Architecture](#architecture)
   - [Tests](#tests)
@@ -17,7 +26,7 @@ Table of Contents
 
 If you've ever looked at a Dockerfile and wanted to know how one of its images is built but didn't know where to find it then you can query this tool with the image and it will **attempt** to find and display the Dockerfile in your default browser.
 
-> NOTE: WIP, doesn't cover all formats, private repos you do not have access to, and may default to displaying the closest page it can find if it cannot locate the actual file but knows the image is somewhere in the project. It probably doesn't work across all platforms. 1 part also assumes you have docker installed which needs to be changed if not installed.
+> Note: Work in progress
 
 ## Usage
 
@@ -42,6 +51,10 @@ Arguments:
 Options:
   -h, --help  Print help
 ```
+
+### Environment
+
+To search for references on GitHub we require a PAT with read access to packages. You may either provide it in the cli as an arg, set it as an environment variable or copy [.env.example](./.env.example) to `.env` and store your username/token in there (not recommended).
 
 ### Image Search Examples
 
@@ -70,6 +83,42 @@ Open Docker Hub to find the client.
 ```shell
 $ dis ethereum/client-go
 ```
+
+### Caveats
+
+#### Platform
+
+Linux only. May implement a Dockerfile if I feel like it but probably not so fork or PR the file.
+
+#### Webpage
+
+Default to displaying the closest page it can find if it cannot locate the Dockerfile but knows the image is somewhere in the project.
+
+#### Private Repos
+
+No authentication so private projects may not work.
+
+#### Local Repos
+
+Haven't tested. Probably doesn't work.
+
+#### References / Tags
+
+Not implemented everywhere so it may ignore it in some cases.
+
+#### Docker Hub
+
+The API does not expose a way to associate a reference with a project to allow us to find the source and open the Dockerfile directly. Webscraping is unreliable and a bad solution.
+
+Once Docker Hub is opened you must read the overview and click the reference to redirect you to the Dockerfile, if the reference is listed and hyperlinked. 
+
+### Github
+
+If a reference is provided it will try to use it. If it fails to find the file for that reference it will attempt to use the default branch of the repo to find a file instead.
+
+To actually use a reference GitHub requires a token which has read access to packages otherwise api queries are rejected.
+
+> Not currently implemented for images with ghcr.io in them
 
 ## Development
 
